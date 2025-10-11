@@ -1,54 +1,32 @@
 <script setup>
 import { ref, toRaw } from "vue";
+import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import WindowCtr from "./components/WindowCtr.vue";
+import TxtEditor from "./components/TxtEditor.vue";
+import { useBookStore } from "./store/bookStore";
+const { curChapter, metaData, toc } = storeToRefs(useBookStore());
 
-// 窗口控制函数
-const minimizeApp = async () => {
-  try {
-    const window = getCurrentWindow();
-    await window.minimize();
-  } catch (error) {
-    console.error("最小化失败:", error);
-  }
-};
+const updateCurChapter = (val) => {
+  const _chapter = {
+    content: val,
+    title: "章名",
+    bookId: 0,
+    content: val,
+    toc: [],
+  };
 
-const maximizeApp = async () => {
-  try {
-    const window = getCurrentWindow();
-    const isMaximized = await window.isMaximized();
-    if (isMaximized) {
-      await window.unmaximize();
-    } else {
-      await window.maximize();
-    }
-  } catch (error) {
-    console.error("最大化失败:", error);
-  }
-};
-
-const closeApp = async () => {
-  try {
-    const window = getCurrentWindow();
-    await window.close();
-  } catch (error) {
-    console.error("关闭失败:", error);
-  }
-};
-
-const textareaVal = ref("");
-const setTextareaVal = (val) => {
-  textareaVal.value = val;
+  curChapter.value = _chapter;
 };
 
 const openFile = async () => {
   let data = await invoke("open_file", {});
   console.log(data);
-  setTextareaVal(data);
+  updateCurChapter(data);
 };
 
 const saveFile = async () => {
-  await invoke("save_file", { content: toRaw(textareaVal.value) });
+  // await invoke("save_file", { content: toRaw(textareaVal.value) });
 };
 </script>
 
@@ -60,20 +38,13 @@ const saveFile = async () => {
         <button @click="saveFile">保存</button>
       </div>
       <span class="title">文本编辑器</span>
-
-      <div class="open-close-btn">
-        <span class="iconfont icon-zuixiaohua" @click="minimizeApp"></span>
-        <span
-          class="iconfont icon-zuidahua_huaban1"
-          @click="maximizeApp"
-        ></span>
-        <span class="iconfont icon-guanbi" @click="closeApp"></span>
-      </div>
+      <WindowCtr />
     </div>
-  </div>
-  <div class="text-editor">
-    <textarea placeholder="请输入文本" class="text-input" v-model="textareaVal">
-    </textarea>
+    <div class="content">
+      <div id="leftMenu">
+      </div>
+      <TxtEditor />
+    </div>
   </div>
 </template>
 
@@ -161,5 +132,34 @@ const saveFile = async () => {
   border: 1px solid #ccc;
   padding: 10px;
   border-radius: 5px;
+}
+
+.content {
+  display: flex;
+  flex-direction: row;
+  width: 99%;
+  height: calc(100vh - 45px);
+  background-color: #add8e6;
+  box-sizing: border-box !important;
+}
+
+#leftMenu {
+  width: 200px;
+  height: 100%;
+  background-color: #f0f0f0;
+  border-right: 1px solid #add8e6;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#leftMenu div {
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-overflow: ellipsis;
 }
 </style>
