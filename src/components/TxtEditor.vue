@@ -110,6 +110,7 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 .top-bar {
   width: 100%;

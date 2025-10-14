@@ -1,12 +1,14 @@
 <script setup>
-import { ref, toRaw } from "vue";
+import { ref, toRaw, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import WindowCtr from "./components/WindowCtr.vue";
 import TxtEditor from "./components/TxtEditor.vue";
+import { open } from "./libs/parseBook.js";
+import { readTxtFile, getTextFromHTML } from "./common/utils";
 import { useBookStore } from "./store/bookStore";
 const { curChapter, metaData, toc } = storeToRefs(useBookStore());
-
+window.$ = document.querySelector.bind(document);
 const updateCurChapter = (val) => {
   const _chapter = {
     content: val,
@@ -22,12 +24,45 @@ const updateCurChapter = (val) => {
 const openFile = async () => {
   let data = await invoke("open_file", {});
   console.log(data);
-  updateCurChapter(data);
+  if (data.fileExt === "txt" || data.fileExt === "html") {
+    updateCurChapter(data.content);
+  }
 };
 
 const saveFile = async () => {
   // await invoke("save_file", { content: toRaw(textareaVal.value) });
 };
+
+const initDom = () => {
+  $("#add-file").addEventListener("change", (e) => {
+    // 检查用户是否选择了文件
+    if (e.target.files.length > 0) {
+      const newFile = e.target.files[0];
+      const ext = newFile.name.split(".").pop();
+      if (ext === "txt" || ext === "html") {
+        let fileStr = "";
+        readTxtFile(newFile).then((data) => {
+          fileStr = ext === "html" ? getTextFromHTML(data) : data;
+          console.log("data", data);
+          fileStr = data;
+          updateCurChapter(fileStr);
+        });
+      } else if (ext === "epub" || ext === "mobi") {
+        open(newFile).then((res) => {
+          console.log(" 02 open", res);
+        });
+      }
+    } else {
+      console.log("用户未选择文件");
+    }
+  });
+
+  $("#add-file-btn").addEventListener("click", () => $("#add-file").click());
+};
+
+onMounted(() => {
+  initDom();
+});
 </script>
 
 <template>
@@ -35,14 +70,21 @@ const saveFile = async () => {
     <div class="title-bar">
       <div class="ctrl-bar">
         <button @click="openFile">打开</button>
-        <button @click="saveFile">保存</button>
+        <input
+          type="file"
+          id="add-file"
+          hidden
+          accept=".txt,.html,.epub,.mobi,.azw3"
+        />
+        <button id="add-file-btn">
+          <span>导入</span>
+        </button>
       </div>
       <span class="title">文本编辑器</span>
       <WindowCtr />
     </div>
     <div class="content">
-      <div id="leftMenu">
-      </div>
+      <div id="leftMenu"></div>
       <TxtEditor />
     </div>
   </div>
@@ -144,7 +186,6 @@ const saveFile = async () => {
 }
 
 #leftMenu {
-  width: 200px;
   height: 100%;
   background-color: #f0f0f0;
   border-right: 1px solid #add8e6;

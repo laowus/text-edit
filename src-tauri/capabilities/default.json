@@ -6,6 +6,15 @@
   "permissions": [
     "core:default",
     "shell:allow-open",
+    "fs:default",
+    {
+      "identifier": "fs:scope-appconfig-recursive",
+      "allow": [
+        {
+          "path": "$APPCONFIG"
+        }
+      ]
+    },
     "dialog:default",
     "opener:default",
     "core:window:allow-maximize",
