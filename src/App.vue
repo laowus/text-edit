@@ -1,14 +1,16 @@
 <script setup>
-import { ref, toRaw, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { storeToRefs } from "pinia";
-import { invoke } from "@tauri-apps/api/core";
 import WindowCtr from "./components/WindowCtr.vue";
 import TxtEditor from "./components/TxtEditor.vue";
+import { initializeDatabase } from "./common/database.js";
 import { open } from "./libs/parseBook.js";
 import { readTxtFile, getTextFromHTML } from "./common/utils";
 import { useBookStore } from "./store/bookStore";
+import TreeMenu from "./components/TreeMenu.vue";
 const { curChapter, metaData, toc } = storeToRefs(useBookStore());
 window.$ = document.querySelector.bind(document);
+
 const updateCurChapter = (val) => {
   const _chapter = {
     content: val,
@@ -17,20 +19,16 @@ const updateCurChapter = (val) => {
     content: val,
     toc: [],
   };
-
   curChapter.value = _chapter;
 };
 
-const openFile = async () => {
-  let data = await invoke("open_file", {});
-  console.log(data);
-  if (data.fileExt === "txt" || data.fileExt === "html") {
-    updateCurChapter(data.content);
+const initDB = async () => {
+  try {
+    //初始化数据库
+    await initializeDatabase();
+  } catch (error) {
+    console.error("加载用户数据失败:", error);
   }
-};
-
-const saveFile = async () => {
-  // await invoke("save_file", { content: toRaw(textareaVal.value) });
 };
 
 const initDom = () => {
@@ -61,6 +59,7 @@ const initDom = () => {
 };
 
 onMounted(() => {
+  initDB();
   initDom();
 });
 </script>
@@ -69,7 +68,6 @@ onMounted(() => {
   <div class="container">
     <div class="title-bar">
       <div class="ctrl-bar">
-        <button @click="openFile">打开</button>
         <input
           type="file"
           id="add-file"
@@ -194,13 +192,25 @@ onMounted(() => {
   font-size: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  width: 200px;
+  padding: 0 !important;
 }
 
-#leftMenu div {
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-overflow: ellipsis;
+/* 处理菜单过多时的滚动问题 */
+#leftMenu::-webkit-scrollbar {
+  width: 6px;
+}
+
+#leftMenu::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#leftMenu::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+#leftMenu::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }
 </style>
