@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "文本编辑器",
+        "title": "捡书",
         "width": 1024,
         "height": 768,
         "decorations": false

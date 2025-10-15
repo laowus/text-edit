@@ -7,12 +7,23 @@ import "./assets/styles/global.css";
 import "./assets/styles/iconfont/iconfont.css";
 import { createPinia } from "pinia";
 import piniaPersist from "pinia-plugin-persist";
+import { initializeDatabase } from "./common/database";
+
 //状态管理
 const pinia = createPinia();
 pinia.use(piniaPersist);
 
 window.$ = document.querySelector.bind(document);
 const app = createApp(App);
+
+(async () => {
+  try {
+    await initializeDatabase();
+    console.log("数据库初始化成功");
+  } catch (error) {
+    console.error("数据库初始化失败:", error);
+  }
+})();
 
 //应用：配置全局异常处理器
 app.config.errorHandler = (err, vm, info) => {

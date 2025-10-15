@@ -1,86 +1,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { storeToRefs } from "pinia";
-import WindowCtr from "./components/WindowCtr.vue";
+
 import TxtEditor from "./components/TxtEditor.vue";
-import { initializeDatabase } from "./common/database.js";
-import { open } from "./libs/parseBook.js";
-import { readTxtFile, getTextFromHTML } from "./common/utils";
-import { useBookStore } from "./store/bookStore";
-
-const { curChapter, metaData, toc } = storeToRefs(useBookStore());
-window.$ = document.querySelector.bind(document);
-
-const updateCurChapter = (val) => {
-  const _chapter = {
-    content: val,
-    title: "章名",
-    bookId: 0,
-    content: val,
-    toc: [],
-  };
-  curChapter.value = _chapter;
-};
-
-const initDB = async () => {
-  try {
-    //初始化数据库
-    await initializeDatabase();
-  } catch (error) {
-    console.error("加载用户数据失败:", error);
-  }
-};
-
-const initDom = () => {
-  $("#add-file").addEventListener("change", (e) => {
-    // 检查用户是否选择了文件
-    if (e.target.files.length > 0) {
-      const newFile = e.target.files[0];
-      const ext = newFile.name.split(".").pop();
-      if (ext === "txt" || ext === "html") {
-        let fileStr = "";
-        readTxtFile(newFile).then((data) => {
-          fileStr = ext === "html" ? getTextFromHTML(data) : data;
-          console.log("data", data);
-          fileStr = data;
-          updateCurChapter(fileStr);
-        });
-      } else if (ext === "epub" || ext === "mobi") {
-        open(newFile).then((res) => {
-          console.log(" 02 open", res);
-        });
-      }
-    } else {
-      console.log("用户未选择文件");
-    }
-  });
-
-  $("#add-file-btn").addEventListener("click", () => $("#add-file").click());
-};
-
-onMounted(() => {
-  initDB();
-  initDom();
-});
+import Header from "./components/Header.vue";
 </script>
 
 <template>
   <div class="container">
-    <div class="title-bar">
-      <div class="ctrl-bar">
-        <input
-          type="file"
-          id="add-file"
-          hidden
-          accept=".txt,.html,.epub,.mobi,.azw3"
-        />
-        <button id="add-file-btn">
-          <span>导入</span>
-        </button>
-      </div>
-      <span class="title">捡书</span>
-      <WindowCtr />
-    </div>
+    <Header></Header>
     <div class="content">
       <div id="leftMenu"></div>
       <TxtEditor />
@@ -106,6 +34,7 @@ onMounted(() => {
   padding: 5px 10px;
   justify-content: space-between;
   justify-items: center;
+  background: #000;
 }
 .title {
   font-size: 16px;
