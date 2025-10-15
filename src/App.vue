@@ -7,7 +7,7 @@ import { initializeDatabase } from "./common/database.js";
 import { open } from "./libs/parseBook.js";
 import { readTxtFile, getTextFromHTML } from "./common/utils";
 import { useBookStore } from "./store/bookStore";
-import TreeMenu from "./components/TreeMenu.vue";
+
 const { curChapter, metaData, toc } = storeToRefs(useBookStore());
 window.$ = document.querySelector.bind(document);
 
@@ -78,7 +78,7 @@ onMounted(() => {
           <span>导入</span>
         </button>
       </div>
-      <span class="title">文本编辑器</span>
+      <span class="title">捡书</span>
       <WindowCtr />
     </div>
     <div class="content">
