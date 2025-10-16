@@ -150,11 +150,11 @@ export const makeBook = async (file) => {
       book = await makeFB2(file);
     }
   }
-  // const blobCover = await book.getCover();
-  // if (blobCover) {
-  //   const strCover = await img2str(blobCover);
-  //   book.metadata.cover = strCover;
-  // }
+  const blobCover = await book.getCover();
+  if (blobCover) {
+    const strCover = await img2str(blobCover);
+    book.metadata.cover = strCover;
+  }
   if (!book) throw new UnsupportedTypeError("File type not supported");
   return book;
 };

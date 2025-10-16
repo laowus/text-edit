@@ -37,6 +37,7 @@ const initDom = () => {
         let fileStr = "";
         readTxtFile(newFile).then((data) => {
           fileStr = ext === "html" ? getTextFromHTML(data) : data;
+          console.log("fileStr", fileStr);
           if (isFirst.value) {
             const meta = {
               title: newFile.name.split(".")[0],
@@ -46,8 +47,9 @@ const initDom = () => {
             };
             //调用 database中的 addBook 方法
             addBook(meta).then((res) => {
-              if (data.success) {
-                meta.bookId = data.bookId;
+              console.log("addBook后返回数据", res);
+              if (res.success) {
+                meta.bookId = res.data.id;
                 setMetaData(meta);
                 const chapter = {
                   bookId: metaData.value.bookId,
@@ -61,6 +63,14 @@ const initDom = () => {
                 ElMessage.error("插入失败");
               }
             });
+          } else {
+            const chapter = {
+              bookId: metaData.value.bookId,
+              label: newFile.name.split(".")[0],
+              href: `OPS/chapter-${Date.now()}`,
+              content: fileStr,
+            };
+            EventBus.emit("addChapter", { href: null, chapter: chapter });
           }
         });
       } else if (ext === "epub" || ext === "mobi") {
@@ -68,6 +78,7 @@ const initDom = () => {
           console.log(" 02 open", res);
         });
       }
+      e.target.value = "";
     } else {
       console.log("用户未选择文件");
     }

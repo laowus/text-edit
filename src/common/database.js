@@ -54,6 +54,7 @@ const createTables = async () => {
 
 // 添加书籍 进行 try catch 处理
 const addBook = async (book) => {
+  console.log("addBook", book);
   try {
     await db.execute(
       `INSERT INTO ee_book (title, author, description, cover, isDel, createTime, updateTime)
@@ -70,5 +71,47 @@ const addBook = async (book) => {
   }
 };
 
+const addChapter = async (chapter) => {
+  try {
+    await db.execute(
+      `INSERT INTO ee_chapter (bookId, label, href, content, createTime, updateTime)
+       VALUES (? , ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+      [chapter.bookId, chapter.label, chapter.href, chapter.content]
+    );
+    const result = await db.select(
+      "SELECT * FROM ee_chapter WHERE id = last_insert_rowid()"
+    );
+    return { success: true, data: result[0] };
+  } catch (error) {
+    console.error("添加章节失败:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+const updateToc = async (bookId, toc) => {
+  try {
+    await db.execute(`UPDATE ee_book SET toc = ? WHERE id = ?`, [toc, bookId]);
+    return { success: true };
+  } catch (error) {
+    console.error("更新目录失败:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+const getCurChapter = async (bookId, href) => {
+  console.log("database.js获取章节", bookId, href);
+  try {
+    const result = await db.select(
+      "SELECT * FROM ee_chapter WHERE bookId = ? AND id = ?",
+      [bookId, href]
+    );
+    console.log("database.js获取章节内容", result);
+    return { success: true, data: result[0] };
+  } catch (error) {
+    console.error("获取章节失败:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // 统一导出
-export { initializeDatabase, addBook };
+export { initializeDatabase, addBook, addChapter, updateToc, getCurChapter };
