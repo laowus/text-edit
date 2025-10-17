@@ -31,6 +31,7 @@ export const useBookStore = defineStore("bookStore", {
     addTocByHref(href, tocItem) {
       console.log("添加章节", href, tocItem);
       addChapter(tocItem).then((res) => {
+        console.log("addChapter 返回", res);
         if (res.success) {
           const item = {
             label: tocItem.label,
@@ -53,6 +54,8 @@ export const useBookStore = defineStore("bookStore", {
             this.toc.push(item);
             console.log("添加章节后 目录", this.toc);
           }
+          // 发送插入成功事件
+          EventBus.emit("addChapterRes", res);
           // 发送更新目录事件
           EventBus.emit("updateToc", item.href);
         }

@@ -16,15 +16,6 @@ EventBus.on("hideTip", (text = "完成!") => {
   showTip(text);
   hideTip();
 });
-
-ipcRenderer.on("showtip", (event, text) => {
-  console.log("text", text);
-  showTip(text);
-});
-ipcRenderer.on("hidetip", () => {
-  showTip("完成!");
-  hideTip();
-});
 </script>
 <template>
   <div id="popovers">

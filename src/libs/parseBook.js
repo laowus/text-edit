@@ -8,8 +8,8 @@ import {
 } from "@zip.js/zip.js";
 import { useBookStore } from "../store/bookStore.js";
 import EventBus from "../common/EventBus";
-import { addBook } from "../common/database";
-import { join, appDataDir } from "@tauri-apps/api/path";
+import { addBook, addChapter, getFirstChapter } from "../common/database";
+import { join, appDataDir, basename } from "@tauri-apps/api/path";
 import { exists, remove, writeFile, mkdir } from "@tauri-apps/plugin-fs";
 
 const appDataPath = await appDataDir();
@@ -30,7 +30,6 @@ const unzipEpub = async (file, extractPath) => {
   return new Promise(async (resolve, reject) => {
     // 创建图片目录
     const imagesDir = await join(extractPath, "images");
-    console.log("创建图片目录:", imagesDir);
     try {
       await mkdir(imagesDir, { recursive: true });
     } catch (error) {
@@ -41,7 +40,6 @@ const unzipEpub = async (file, extractPath) => {
       configure({ useWebWorkers: false });
       const reader = new ZipReader(new BlobReader(file));
       const zipEntries = await reader.getEntries();
-      console.log("zipEntries", zipEntries);
       // 存储原始图片路径和重命名后的路径的映射
       const imageMap = new Map();
       zipEntries.forEach(async (entry) => {
@@ -59,11 +57,7 @@ const unzipEpub = async (file, extractPath) => {
         if (imageExtensions.includes(ext)) {
           // 生成唯一的文件名，避免冲突
           const uniqueName = `${generateCustomShortId()}.${ext}`;
-          console.log("uniqueName", uniqueName);
           const targetPath = await join(imagesDir, uniqueName);
-          console.log("targetPath", targetPath);
-          // 保存文件
-          console.log("entry", entry);
           await entry
             .getData(new Uint8ArrayWriter())
             .then(async (uint8Array) => {
@@ -71,12 +65,6 @@ const unzipEpub = async (file, extractPath) => {
                 await writeFile(targetPath, uint8Array);
                 // 记录原始路径和新路径的映射
                 imageMap.set(entry.filename, "images/" + uniqueName);
-                console.log(
-                  `已提取并重命名图片: ${entry.filename} -> ${await join(
-                    "images",
-                    uniqueName
-                  )}`
-                );
               }
             });
         }
@@ -107,7 +95,6 @@ export const open = async (file) => {
           description: book.metadata.description,
         };
         addBook(_metaData).then(async (res) => {
-          console.log("addBook 返回最新", res);
           if (res.success) {
             const bookId = res.data.id;
             setMetaData({ ..._metaData, bookId: bookId });
@@ -132,7 +119,6 @@ export const open = async (file) => {
                 } else {
                   console.warn("Invalid or missing cover data");
                 }
-                console.log(`文件已成功写入: ${coverPath}`);
               } catch (error) {
                 console.error("处理文件时出错:", error);
                 throw error;
@@ -144,7 +130,6 @@ export const open = async (file) => {
                 const curEpubDir = await join(epubDir, `${bookId}`);
                 const result = await unzipEpub(file, curEpubDir);
                 imageMap = result.imageMap;
-                console.log(`EPUB 文件已解压到: ${result.extractPath}`);
               } catch (error) {
                 console.error("解压EPUB文件时出错:", error);
                 throw error;
@@ -154,7 +139,11 @@ export const open = async (file) => {
             // 插入章节，传入imageMap
             await insertChapter(book, bookId, imageMap);
             setFirst(false);
-            
+            // 继续原流程
+            const firstChapter = await getFirstChapter(bookId);
+            resolve(firstChapter.data);
+            EventBus.emit("updateToc", firstChapter.data.id);
+            EventBus.emit("hideTip");
           } else {
             reject(res.error);
           }
@@ -171,6 +160,7 @@ const insertChapter = async (book, bookId, imageMap = null) => {
     const res = await book.resolveHref(item.href);
     // 等待 createDocument 完成
     const doc = await book.sections[res.index].createDocument();
+    console.log("doc", doc);
     // 调用修改后的getTextFromHTML函数，传入imageMap
     const str = getTextFromHTML(doc.documentElement.outerHTML, imageMap);
     // 封装发送请求和监听响应为一个 Promise
@@ -199,9 +189,10 @@ const insertChapter = async (book, bookId, imageMap = null) => {
       }
     }
   };
-
+  console.log("book.toc.entries()", book.toc.entries());
   // 使用 entries() 方法获取索引和元素
   for (const [index, tocItem] of book.toc.entries()) {
+    console.log("tocItem", tocItem);
     iCTip(
       "导入 " + tocItem.label + " (" + (index + 1) + "/" + book.toc.length + ")"
     );
@@ -249,8 +240,12 @@ const getTextFromHTML = (htmlString, imageMap = null) => {
         // 由于路径格式可能不同，我们需要进行模糊匹配
         let found = false;
         for (let [originalPath, newPath] of imageMap.entries()) {
-          if (src.includes(path.basename(originalPath))) {
-            console.log(`替换图片路径: ${src} -> ${newPath}`);
+          // 使用最后一个分隔符分割路径
+          const separator = process.platform === "win32" ? "\\" : "/";
+          const parts = originalPath.split(separator);
+          const fileName = parts[parts.length - 1];
+          const bn = fileName;
+          if (src.includes(bn)) {
             node.setAttribute("src", newPath);
             found = true;
             break;
@@ -267,7 +262,6 @@ const getTextFromHTML = (htmlString, imageMap = null) => {
         imgHtml += ` ${attr.name}="${attr.value}"`;
       }
       imgHtml += ` />`;
-      console.log("修改后的图片", imgHtml);
       return imgHtml;
     } else if (node.nodeName === "BR") {
       return "\n";

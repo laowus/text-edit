@@ -72,16 +72,22 @@ const addBook = async (book) => {
 };
 
 const addChapter = async (chapter) => {
+  console.log("database.js addChapter", chapter);
   try {
-    await db.execute(
+    // 直接调用executeInsertAndGetId函数，插入数据并获取ID
+    const insertResult = await executeInsertAndGetId(
       `INSERT INTO ee_chapter (bookId, label, href, content, createTime, updateTime)
        VALUES (? , ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
       [chapter.bookId, chapter.label, chapter.href, chapter.content]
     );
-    const result = await db.select(
-      "SELECT * FROM ee_chapter WHERE id = last_insert_rowid()"
-    );
-    return { success: true, data: result[0] };
+
+    // 验证ID是否成功获取
+    if (!insertResult.success || insertResult.id === undefined) {
+      throw new Error("插入章节失败，未获取到ID");
+    }
+
+    console.log("添加章节成功，ID为:", insertResult.id);
+    return { success: true, data: { id: insertResult.id } };
   } catch (error) {
     console.error("添加章节失败:", error);
     return { success: false, error: error.message };
@@ -113,5 +119,37 @@ const getCurChapter = async (bookId, href) => {
   }
 };
 
+const getFirstChapter = async (bookId) => {
+  try {
+    const result = await db.select(
+      "SELECT * FROM ee_chapter WHERE bookId = ? ORDER BY id ASC LIMIT 1",
+      [bookId]
+    );
+    return { success: true, data: result[0] };
+  } catch (error) {
+    console.error("获取第一章节失败:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+// 通用插入函数，返回新插入记录的ID
+const executeInsertAndGetId = async (sql, params = []) => {
+  try {
+    await db.execute(sql, params);
+    const result = await db.select("SELECT last_insert_rowid() as id");
+    return { success: true, id: result[0].id };
+  } catch (error) {
+    console.error("插入数据失败:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // 统一导出
-export { initializeDatabase, addBook, addChapter, updateToc, getCurChapter };
+export {
+  initializeDatabase,
+  addBook,
+  addChapter,
+  updateToc,
+  getCurChapter,
+  getFirstChapter,
+};

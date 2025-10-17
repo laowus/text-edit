@@ -47,6 +47,7 @@ const updateTocView = (curhref) => {
 };
 
 const updateCurChapter = (href) => {
+  console.log("更新当前章节", metaData.value);
   getCurChapter(metaData.value.bookId, href).then((res) => {
     console.log("获取章节成功", res);
     if (res.success) {
