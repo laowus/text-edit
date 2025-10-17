@@ -7,6 +7,7 @@ import Header from "./components/Header.vue";
 import { useAppStore } from "./store/appStore";
 import { useBookStore } from "./store/bookStore";
 import EventBus from "./common/EventBus";
+import Popovers from "./components/Popovers.vue";
 import { updateToc, getCurChapter } from "./common/database";
 
 const { addTocByHref, moveToc } = useBookStore();
@@ -75,6 +76,7 @@ EventBus.on("updateToc", (href) => {
 
 <template>
   <div class="container">
+    <Popovers @click.stop></Popovers>
     <Header></Header>
     <div class="content">
       <div id="leftMenu">
