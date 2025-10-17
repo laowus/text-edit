@@ -3,9 +3,12 @@ import { storeToRefs } from "pinia";
 import { useBookStore } from "../store/bookStore.js";
 import EventBus from "../common/EventBus";
 import { addBook } from "../common/database";
-import { createFolderInConfigDir } from "../common/folderUtils";
-import { join } from "@tauri-apps/api/path";
-import { exists, writeFile, remove } from "@tauri-apps/plugin-fs";
+import { join, BaseDirectory, appDataDir } from "@tauri-apps/api/path";
+import { exists, remove, writeFile, mkdir } from "@tauri-apps/plugin-fs";
+import { safeCreateOrReplaceFile } from "../common/fileUtil.js";
+
+const appDataPath = await appDataDir();
+const coversDir = await join(appDataPath, "covers");
 
 /**
  * 保存封面到本地
@@ -17,13 +20,7 @@ const saveCoverToLocal = (coverData, coverPath) => {
   return new Promise((resolve, reject) => {
     const base64Data = coverData.split(",")[1];
     const fileBuffer = Buffer.from(base64Data, "base64");
-    writeFile(coverPath, fileBuffer, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(coverPath);
-      }
-    });
+    writeFile(coverPath, fileBuffer);
   });
 };
 
@@ -44,25 +41,35 @@ export const open = async (file) => {
           title: book.metadata.title,
           author: book.metadata.author.name,
           description: book.metadata.description,
-          cover: book.metadata.cover,
         };
         addBook(_metaData).then(async (res) => {
+          console.log("addBook 返回最新", res);
           if (res.success) {
-            const bookId = res.bookId;
+            const bookId = res.data.id;
             setMetaData({ ..._metaData, bookId: bookId });
-            const coverDir = await createFolderInConfigDir("covers");
             let coverPath = "";
+            // 获取路径
             if (book.metadata.cover) {
-              coverPath = await join(coverDir, `${bookId}.jpg`);
-              console.log("coverPath", coverPath);
-              //假如coverPath 存在就删除
-              const fileExists = await exists(coverPath);
-              // 如果文件存在，则删除
-              if (fileExists) {
-                await remove(coverPath);
-                console.log(`文件 ${coverPath} 已存在，已删除`);
+              try {
+                try {
+                  await mkdir(coversDir, { recursive: true });
+                } catch (error) {
+                  console.warn("Covers directory might already exist:", error);
+                }
+                const coverPath = await join(coversDir, `${bookId}.jpg`);
+                console.log("coverPath", coverPath);
+                const fileExists = await exists(coverPath);
+                if (fileExists) {
+                  await remove(coverPath);
+                }
+                const base64Data = book.metadata.cover.split(",")[1];
+                const fileBuffer = Buffer.from(base64Data, "base64");
+                await writeFile(coverPath, fileBuffer);
+                console.log(`文件已成功写入: ${coverPath}`);
+              } catch (error) {
+                console.error("处理文件时出错:", error);
+                throw error;
               }
-              await saveCoverToLocal(book.metadata.cover, coverPath);
             }
           } else {
             reject(res.error);

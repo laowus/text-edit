@@ -7,14 +7,10 @@
     "core:default",
     "shell:allow-open",
     "fs:default",
-    {
-      "identifier": "fs:scope-appconfig-recursive",
-      "allow": [
-        {
-          "path": "$APPCONFIG"
-        }
-      ]
-    },
+    "fs:scope-appdata-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
     "dialog:default",
     "opener:default",
     "core:window:allow-maximize",

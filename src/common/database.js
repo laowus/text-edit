@@ -30,7 +30,6 @@ const createTables = async () => {
             title TEXT,
             author TEXT,
             description TEXT,
-            cover TEXT,
             toc TEXT,
             isDel INTEGER,
             createTime TEXT,
@@ -57,13 +56,14 @@ const addBook = async (book) => {
   console.log("addBook", book);
   try {
     await db.execute(
-      `INSERT INTO ee_book (title, author, description, cover, isDel, createTime, updateTime)
-       VALUES (? , ?, ?, ?, 0, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
-      [book.title, book.author, book.description, book.cover]
+      `INSERT INTO ee_book (title, author, description,  isDel, createTime, updateTime)
+       VALUES (? , ?, ?, 0, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+      [book.title, book.author, book.description]
     );
     const result = await db.select(
       "SELECT * FROM ee_book WHERE id = last_insert_rowid()"
     );
+    console.log("addBook 返回最新 :::", result);
     return { success: true, data: result[0] };
   } catch (error) {
     console.error("添加书籍失败:", error);
